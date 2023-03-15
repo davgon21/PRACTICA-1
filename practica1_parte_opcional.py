@@ -44,7 +44,6 @@ def get_data(Buffer, mutex, lista_indices):
              if Buffer[y][k] == min(lista_pos): #de los elementos producidos por los consumidores, nos quedamos con el más pequeño
                   pos_consumed = y
                   menor = [pos_consumed, min(lista_pos)]
-                  print(f"Cogemos {min(lista_pos)} del productor {pos_consumed}")
                   delay()
                   return menor
     finally:
