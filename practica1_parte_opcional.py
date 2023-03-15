@@ -12,8 +12,8 @@ NCONS = 1 # Número de consumidores
 #tam_buff = 4 #Tamaño del buffer correspondiente a cada productor
 
 #Creamos una función para generar un tiempo de espera aleatorio
-def delay(factor = 3):
-    sleep(0.05)
+def delay():
+    sleep(0.05)   #sleep(random()/factor) (no me funciona)
 
 #Creamos una función que añada los elementos que producen los productores al buffer compartido
 def add_data(Buffer, mutex, ultimos_vals, lista_indices):
@@ -25,14 +25,14 @@ def add_data(Buffer, mutex, ultimos_vals, lista_indices):
  
          lista_indices[pos] += 1
          ultimos_vals[pos] = nuevo_dato #acumulamos el nuevo elemento en la lista de ultimos valores de cada productor
-         delay(6)
+         delay()
      finally:
          mutex.release()
          
          
 def get_data(Buffer, mutex, lista_indices):
     mutex.acquire()
-    try:
+    try:     
         lista_pos = [] #lista de productos mayores que 0
         for prod in range(NPROD):
             for j in range(N):
@@ -45,7 +45,7 @@ def get_data(Buffer, mutex, lista_indices):
                   pos_consumed = y
                   menor = [pos_consumed, min(lista_pos)]
                   print(f"Cogemos {min(lista_pos)} del productor {pos_consumed}")
-                  delay(6)
+                  delay()
                   return menor
     finally:
         mutex.release()
@@ -62,14 +62,14 @@ def producer(Buffer, empty, non_empty, mutex, ultimos_vals, lista_indices):
     pos= int(current_process().name.split('_')[1])
     for v in range(N):
         print (f"productor {current_process().name} produciendo")
-        delay(6)
+        delay()
         empty.acquire()
         add_data(Buffer, mutex, ultimos_vals, lista_indices)
         non_empty.release()
         #print (f"productor {current_process().name} en la producción {v}")
     empty.acquire()
-    for i in range(N):
-    	Buffer[i] = -1 # En cuanto haya acabado de producir un productor, se cambia todo su buffer a -1
+    
+    Buffer[lista_indices[pos]] = -1 # En cuanto haya acabado de producir un productor, se cambia todo su buffer a -1
     print (f"productor {current_process().name} almacenado {-1}, y por tanto ya no produce más")   
     non_empty.release()     
        
@@ -78,24 +78,27 @@ def consumer(Buffer, empty, non_empty, mutex, vals_consumidos, ultimos_vals,list
        for v in range(NPROD):
            non_empty[v].acquire()
        
-       a = quedan_productores(Buffer, mutex)
-       while a:
+       
+       while quedan_productores(Buffer, mutex):
            print (f"{current_process().name} consumiendo")
            [prod,min_val] = get_data(Buffer, mutex, lista_indices)
            
            vals_consumidos.append(min_val)
-           for i in range(len(Buffer[prod])-2):
+           for i in range(len(Buffer[prod])-1):
            	Buffer[prod][i] = Buffer[prod][i+1]
            Buffer[prod][len(Buffer[prod])-1] = -2
            lista_indices[prod]-=1
+           
+           if Buffer[prod][0] == -1 :
+               for i in range(1,N):
+                  Buffer[prod][i] = -1
            
            print (f"{current_process().name} consumiendo {min_val} del productor {prod}")
            empty[prod].release()
            non_empty[prod].acquire()
            delay()
-           for i in range(NPROD):
-           	print(Buffer[i][:])
-           a = quedan_productores(Buffer, mutex)
+           #for i in range(NPROD):
+           #	print(Buffer[i][:])
        print(f"La lista de valores consumidos es {vals_consumidos}")
        for i in range(NPROD):
        		print(f"El buffer final del productor {i} es {Buffer[i][:]}")
